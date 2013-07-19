@@ -1242,11 +1242,13 @@ class ArmoryMainWindow(QMainWindow):
    def loadBlockchainIfNecessary(self):
       LOGINFO('loadBlockchainIfNecessary')
       if CLI_OPTIONS.offline:
+         LOGINFO('>>> 0')
          if self.forceOnline:
             LOGERROR('Cannot mix --force-online and --offline options!  Using offline mode.')
          self.switchNetworkMode(NETWORKMODE.Offline)
          TheBDM.setOnlineMode(False, wait=False)
       elif self.onlineModeIsPossible():
+         LOGINFO('>>> 1')
          # Track number of times we start loading the blockchain.
          # We will decrement the number when loading finishes
          # We can use this to detect problems with mempool or blkxxxx.dat
@@ -1258,21 +1260,26 @@ class ArmoryMainWindow(QMainWindow):
          self.switchNetworkMode(NETWORKMODE.Full)
          self.resetBdmBeforeScan()
          TheBDM.setOnlineMode(True, wait=False)
-
       else:
+         LOGINFO('>>> 2')
          self.switchNetworkMode(NETWORKMODE.Offline)
          TheBDM.setOnlineMode(False, wait=False)
-          
 
 
 
 
    #############################################################################
    def checkHaveBlockfiles(self):
+      LOGINFO('>>> TheBDM.blk1st %s' % TheBDM.blk1st)
       return os.path.exists(TheBDM.blk1st)
 
    #############################################################################
    def onlineModeIsPossible(self):
+      LOGINFO('>>> self.internetAvail %s' % self.internetAvail)
+      LOGINFO('>>> self.forceOnline %s' % self.forceOnline)
+      LOGINFO('>>> self.bitcoindIsAvailable() %s' % self.bitcoindIsAvailable())
+      LOGINFO('>>> self.checkHaveBlockfiles() %s' % self.checkHaveBlockfiles())
+
       return ((self.internetAvail or self.forceOnline) and \
                self.bitcoindIsAvailable() and \
                self.checkHaveBlockfiles())
@@ -1297,6 +1304,7 @@ class ArmoryMainWindow(QMainWindow):
          from twisted.internet import reactor
 
          def showOfflineMsg():
+            LOGINFO('>>> showOfflineMsg called')
             self.netMode = NETWORKMODE.Disconnected
             self.setDashboardDetails()
             self.lblArmoryStatus.setText( \
@@ -1315,6 +1323,7 @@ class ArmoryMainWindow(QMainWindow):
 
          self.connectCount = 0
          def showOnlineMsg():
+            LOGINFO('>>> showOnlineMsg called')
             self.netMode = NETWORKMODE.Full
             self.setDashboardDetails()
             self.lblArmoryStatus.setText(\
@@ -1332,7 +1341,8 @@ class ArmoryMainWindow(QMainWindow):
             except:
                LOGEXCEPT('Failed to show reconnect notification')
    
-   
+         LOGINFO('>>> switchNetworkMode called by self')
+         LOGINFO('>>> {0} - {1}'.format(self, type(self)))
          self.NetworkingFactory = ArmoryClientFactory( \
                                           func_loseConnect=showOfflineMsg, \
                                           func_madeConnect=showOnlineMsg, \
@@ -1346,6 +1356,7 @@ class ArmoryMainWindow(QMainWindow):
 
    #############################################################################
    def newTxFunc(self, pytxObj):
+      LOGINFO('>>>> newTxFunc has been run!!!!')
       if TheBDM.getBDMState() in ('Offline','Uninitialized') or self.doShutdown:
          return
 
@@ -1507,6 +1518,7 @@ class ArmoryMainWindow(QMainWindow):
       wltOffline = self.settings.get('Offline_WalletIDs', expectList=True)
       for fpath in wltPaths:
          try:
+            LOGINFO('>>> Loading {0} ...'.format(fpath))
             wltLoad = PyBtcWallet().readWalletFile(fpath)
             wltID = wltLoad.uniqueIDB58
             if fpath in wltExclude or wltID in wltExclude:
@@ -4053,6 +4065,7 @@ class ArmoryMainWindow(QMainWindow):
                   self.lblDashDescr1.setText(descr1)
                   self.lblDashDescr2.setText(descr2)
             else:  # online detected/forced, and TheSDM has already been started
+               LOGINFO('>>> sdmState %s' % sdmState)
                if sdmState in ['BitcoindWrongPassword', 'BitcoindNotAvailable']:
                   setOnlyDashModeVisible()
                   self.mainDisplayTabs.setTabEnabled(self.MAINTABS.Transactions, False)

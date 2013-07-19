@@ -132,7 +132,8 @@ def lenBytes(theStr, theEncoding=DEFAULT_ENCODING):
 
 
 # Use CLI args to determine testnet or not
-USE_TESTNET = CLI_OPTIONS.testnet
+# USE_TESTNET = CLI_OPTIONS.testnet
+USE_TESTNET = True
    
 
 # Set default port for inter-process communication
@@ -8363,6 +8364,7 @@ class PyBtcWallet(object):
       while wltdata.getRemainingSize()>0:
          byteLocation = wltdata.getPosition()
          dtype, hashVal, rawData = self.unpackNextEntry(wltdata)
+         LOGDEBUG('>>> dtype: {0}'.format(dtype))
          if dtype==WLT_DATATYPE_KEYDATA:
             newAddr = PyBtcAddress()
             newAddr.unserialize(rawData)
@@ -10219,6 +10221,7 @@ class ArmoryClientFactory(ReconnectingClientFactory):
       of the handshake-finished callback
       """
       self.lastAlert = 0
+      LOGINFO('>>> def_handshake: {0} -  {1}'.format(def_handshake, type(def_handshake)))
       self.deferred_handshake   = forceDeferred(def_handshake)
       self.fileMemPool = os.path.join(ARMORY_HOME_DIR, 'mempool.bin')
 
@@ -10247,8 +10250,14 @@ class ArmoryClientFactory(ReconnectingClientFactory):
    def handshakeFinished(self, protoObj):
       LOGINFO('Handshake finished, connection open!')
       self.proto = protoObj
+      LOGINFO('>>> {0}'.format(self))
+      LOGINFO('>>> {0}'.format(type(self)))
+      LOGINFO('>>> {0}'.format(protoObj))
+      LOGINFO('>>> {0}'.format(type(protoObj)))
       if self.deferred_handshake:
          d, self.deferred_handshake = self.deferred_handshake, None
+
+         LOGINFO('>>> {0} - {1}'.format(d, type(d)))
          d.callback(protoObj)
 
 
@@ -10318,18 +10327,20 @@ class FakeClientFactory(ReconnectingClientFactory):
 #############################################################################
 import socket
 def satoshiIsAvailable(host='127.0.0.1', port=BITCOIN_PORT, timeout=0.01):
-
    if not isinstance(port, (list,tuple)):
       port = [port]
 
    for p in port:
+      # LOGERROR('>>> satoshiIsAvailable: {0}:{1}'.format(host, p))
+
       s = socket.socket()
       s.settimeout(timeout)   # Most of the time checking localhost -- FAST
       try:
          s.connect((host, p))
          s.close()
          return p
-      except:
+      except Exception, e:
+         # LOGERROR('>>> satoshiIsAvailable: {0}: {1}:{2}'.format(e, host, p))
          pass
 
    return 0
@@ -10692,9 +10703,14 @@ class SatoshiDaemonManager(object):
       
 
       pargs = [self.executable]
-      pargs.append('-datadir=%s' % self.satoshiHome)
+      satoshi_home = self.satoshiHome
+      if USE_TESTNET:
+         satoshi_home = satoshi_home[:satoshi_home.index('testnet') - 1]
+      pargs.append('-datadir=%s' % satoshi_home)
       if USE_TESTNET:
          pargs.append('-testnet')
+
+      pargs.append('-conf=%s' % os.path.join(self.satoshiHome, 'bitcoin.conf'))
 
       try:
          # Don't want some strange error in this size-check to abort loading
